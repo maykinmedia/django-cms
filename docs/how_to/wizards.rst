@@ -2,9 +2,9 @@
 
 .. _wizard_how_to:
 
-#########################################
-How to implement content creation wizards
-#########################################
+########################
+Content creation wizards
+########################
 
 django CMS offers a framework for creating 'wizards' - helpers - for content editors.
 

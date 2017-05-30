@@ -57,8 +57,7 @@ describe('CMS.Toolbar', function () {
             expect(Object.keys(toolbar.ui)).toContain('buttons');
             expect(Object.keys(toolbar.ui)).toContain('messages');
             expect(Object.keys(toolbar.ui)).toContain('structureBoard');
-            expect(Object.keys(toolbar.ui)).toContain('revert');
-            expect(Object.keys(toolbar.ui).length).toEqual(11);
+            expect(Object.keys(toolbar.ui).length).toEqual(10);
         });
 
         it('has options', function () {
@@ -845,17 +844,14 @@ describe('CMS.Toolbar', function () {
 
         it('attaches a handler to publish page button', function () {
             spyOn($, 'ajax');
-            spyOn($.Event.prototype, 'preventDefault').and.callThrough();
-            spyOn($.Event.prototype, 'stopImmediatePropagation').and.callThrough();
+            spyOn($.Event.prototype, 'preventDefault');
             spyOn(CMS.API.Helpers, 'secureConfirm').and.returnValues(false, true);
 
             var publishButton = toolbar.ui.buttons.eq(3).find('.cms-publish-page');
             publishButton.trigger(toolbar.click);
-            expect($.Event.prototype.preventDefault).toHaveBeenCalledTimes(1);
-            expect($.Event.prototype.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+            expect($.Event.prototype.preventDefault).toHaveBeenCalledTimes(2); // two handlers on same button
             publishButton.trigger(toolbar.click);
-            expect($.Event.prototype.preventDefault).toHaveBeenCalledTimes(2);
-            expect($.Event.prototype.stopImmediatePropagation).toHaveBeenCalledTimes(1);
+            expect($.Event.prototype.preventDefault).toHaveBeenCalledTimes(3); // one handler on same button
         });
 
         it('attaches a handler to publish button');
@@ -1064,79 +1060,6 @@ describe('CMS.Toolbar', function () {
             jasmine.clock().tick(10000);
 
             expect(CMS.API.Messages.open).not.toHaveBeenCalled();
-        });
-    });
-
-    describe('.onPublishAvailable()', function () {
-        var toolbar;
-        beforeEach(function (done) {
-            fixture.load('toolbar_with_dropdown.html');
-
-            $(function () {
-                spyOn(CMS.Navigation.prototype, 'initialize').and.callFake(function () {
-                    return {};
-                });
-                toolbar = new CMS.Toolbar();
-                spyOn(toolbar, 'setSettings').and.callFake(function (input) {
-                    return $.extend(true, CMS.settings, input);
-                });
-                setTimeout(function () {
-                    done();
-                }, 100);
-            });
-        });
-
-        afterEach(function () {
-            fixture.cleanup();
-        });
-
-        it('triggers window resize', function () {
-            spyOnEvent(window, 'resize');
-            toolbar.onPublishAvailable();
-            expect('resize').toHaveBeenTriggeredOn(window);
-        });
-
-        it('handles the case with the dropdown with only publish buttons', function () {
-            expect($('.cms-btn-publish').parent()).toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown-menu li').eq(0)).not.toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown-menu li').eq(1)).toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown')).not.toHaveAttr('data-cms-hidden');
-            toolbar.onPublishAvailable();
-            expect($('.cms-dropdown-menu li').eq(0)).not.toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown-menu li').eq(1)).not.toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown')).not.toHaveAttr('data-cms-hidden');
-        });
-    });
-
-    describe('.onPublishAvailable()', function () {
-        var toolbar;
-        beforeEach(function (done) {
-            fixture.load('toolbar_with_dropdown_all_publish.html');
-
-            $(function () {
-                spyOn(CMS.Navigation.prototype, 'initialize').and.callFake(function () {
-                    return {};
-                });
-                toolbar = new CMS.Toolbar();
-                spyOn(toolbar, 'setSettings').and.callFake(function (input) {
-                    return $.extend(true, CMS.settings, input);
-                });
-                setTimeout(function () {
-                    done();
-                }, 100);
-            });
-        });
-
-        afterEach(function () {
-            fixture.cleanup();
-        });
-
-        it('handles the case with the dropdown', function () {
-            expect($('.cms-btn-publish').parent()).toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown')).toHaveAttr('data-cms-hidden');
-            toolbar.onPublishAvailable();
-            expect($('.cms-btn-publish').parent()).not.toHaveAttr('data-cms-hidden');
-            expect($('.cms-dropdown')).not.toHaveAttr('data-cms-hidden');
         });
     });
 });

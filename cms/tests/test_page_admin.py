@@ -16,11 +16,7 @@ from cms import constants
 from cms.admin.forms import AdvancedSettingsForm
 from cms.admin.pageadmin import PageAdmin
 from cms.api import create_page, add_plugin, create_title
-from cms.constants import (
-    PUBLISHER_STATE_DEFAULT,
-    PUBLISHER_STATE_DIRTY,
-    PUBLISHER_STATE_PENDING,
-)
+from cms.constants import PUBLISHER_STATE_DEFAULT, PUBLISHER_STATE_DIRTY
 from cms.middleware.user import CurrentUserMiddleware
 from cms.models.pagemodel import Page
 from cms.models.permissionmodels import PagePermission
@@ -38,7 +34,7 @@ from cms.utils.page_resolver import get_page_from_request
 from cms.utils.urlutils import admin_reverse
 
 
-class PageTreeLiParser(Parser):
+class PageTreeParser(Parser):
 
     def handle_starttag(self, tag, attrs):
         # We have to strip out attributes from the <li>
@@ -48,16 +44,6 @@ class PageTreeLiParser(Parser):
         # and would require us to hardcode a bunch of stuff here
         if tag == 'li':
             attrs = []
-        Parser.handle_starttag(self, tag, attrs)
-
-
-class PageTreeOptionsParser(Parser):
-
-    def handle_starttag(self, tag, attrs):
-        # This parser only cares about the options on the right side
-        # of the page tree for each page.
-        if tag == 'li' and attrs and attrs[-1][0] == 'data-coloptions':
-            attrs = [attrs[-1]]
         Parser.handle_starttag(self, tag, attrs)
 
 
@@ -74,49 +60,6 @@ class PageTestBase(CMSTestCase):
     }
     }
 
-    def _add_plugin_to_page(self, page, plugin_type='LinkPlugin', language='en', publish=True):
-        plugin_data = {
-            'TextPlugin': {'body': '<p>text</p>'},
-            'LinkPlugin': {'name': 'A Link', 'url': 'https://www.django-cms.org'},
-        }
-        placeholder = page.placeholders.get(slot='body')
-        plugin = add_plugin(placeholder, plugin_type, language, **plugin_data[plugin_type])
-
-        if publish:
-            page.reload().publish(language)
-        return plugin
-
-    def _translation_exists(self, slug=None, title=None):
-        if not slug:
-            slug = 'permissions-de'
-
-        lookup = Title.objects.filter(slug=slug)
-
-        if title:
-            lookup = lookup.filter(title=title)
-        return lookup.exists()
-
-    def _get_add_plugin_uri(self, page, language='en'):
-        placeholder = page.placeholders.get(slot='body')
-        uri = self.get_add_plugin_uri(
-            placeholder=placeholder,
-            plugin_type='LinkPlugin',
-            language=language,
-        )
-        return uri
-
-    def _get_page_data(self, **kwargs):
-        site = Site.objects.get_current()
-        data = {
-            'title': 'permissions',
-            'slug': 'permissions',
-            'language': 'en',
-            'site': site.pk,
-            'template': 'nav_playground.html',
-        }
-        data.update(**kwargs)
-        return data
-
     def get_page(self, parent=None, site=None,
                  language=None, template='nav_playground.html'):
         page_data = self.get_new_page_data_dbfields()
@@ -130,10 +73,6 @@ class PageTestBase(CMSTestCase):
 
     def get_post_request(self, data):
         return self.get_request(post_data=data)
-
-    def create_page(self, title=None, **kwargs):
-        return create_page(title or self._testMethodName,
-                           "nav_playground.html", "en", **kwargs)
 
 
 class PageTest(PageTestBase):
@@ -759,130 +698,6 @@ class PageTest(PageTestBase):
             )
             self.assertEqual(page_child_2.is_published("en"), True)
 
-    def test_publish_with_pending_unpublished_descendants(self):
-        # ref: https://github.com/divio/django-cms/issues/5900
-        superuser = self.get_superuser()
-
-        # Needed because the first page created is published automatically
-        self.create_page("Home", published=False)
-        ancestor = self.create_page("Ancestor", published=False)
-        parent = self.create_page("Child", published=False, parent=ancestor)
-        child = self.create_page("Child", published=False, parent=parent)
-
-        with self.login_user_context(superuser):
-            response = self.client.post(self.get_admin_url(Page, 'publish_page', child.pk, 'en'))
-
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(
-                child.reload().get_publisher_state("en"),
-                PUBLISHER_STATE_PENDING
-            )
-
-            response = self.client.post(self.get_admin_url(Page, 'publish_page', parent.pk, 'en'))
-
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(
-                parent.reload().get_publisher_state("en"),
-                PUBLISHER_STATE_PENDING
-            )
-
-            response = self.client.post(self.get_admin_url(Page, 'publish_page', ancestor.pk, 'en'))
-
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(
-                ancestor.reload().get_publisher_state("en"),
-                PUBLISHER_STATE_DEFAULT
-            )
-            self.assertEqual(
-                parent.reload().get_publisher_state("en"),
-                PUBLISHER_STATE_DEFAULT
-            )
-            self.assertEqual(
-                child.reload().get_publisher_state("en"),
-                PUBLISHER_STATE_DEFAULT
-            )
-
-    def test_move_page_regression_5900(self):
-        # ref: https://github.com/divio/django-cms/issues/5900
-        superuser = self.get_superuser()
-        with self.login_user_context(superuser):
-            page_home = self.get_new_page_data()
-            self.client.post(URL_CMS_PAGE_ADD, page_home)
-
-            # Create parent page
-            page_root = create_page("Parent", 'col_three.html', "de", published=False)
-
-            # Create english translation
-            create_title(
-                "en",
-                "parent-en",
-                page=page_root,
-                slug="parent-en"
-            )
-
-            # Create child pages
-            page_child_1 = create_page(
-                "Child 1",
-                template=constants.TEMPLATE_INHERITANCE_MAGIC,
-                language="de",
-                parent=page_root,
-                published=False
-            )
-
-            # Create english translation
-            create_title(
-                "en",
-                "child-1-en",
-                page=page_child_1,
-                slug="child-1-en"
-            )
-
-            # Try to publish child english translation
-            publish_endpoint = self.get_admin_url(Page, 'publish_page', page_child_1.pk, 'en')
-
-            self.client.post(publish_endpoint)
-
-            self.assertEqual(
-                page_child_1.get_publisher_state("en"),
-                PUBLISHER_STATE_PENDING,
-            )
-
-            # Publish the german translations for both the parent and child pages.
-            # This will create the public versions for both.
-            page_root.publish('de')
-            page_child_1.publish('de')
-
-            # Move page_child_1 to the root
-            data = {
-                "id": page_child_1.pk,
-                "position": "2",
-            }
-
-            response = self.client.post(
-                URL_CMS_PAGE_MOVE % page_child_1.pk,
-                data,
-            )
-            self.assertEqual(response.status_code, 200)
-
-            # Ensure move worked
-            self.assertEqual(page_root.reload().get_descendants().count(), 0)
-
-            # Move page_child_1 under its old parent
-            # page_child_1 does not have a public version of its english translation
-            data = {
-                "id": page_child_1.pk,
-                "target": page_root.pk,
-                "position": "0",
-            }
-            response = self.client.post(
-                URL_CMS_PAGE_MOVE % page_child_1.pk,
-                data,
-            )
-            self.assertEqual(response.status_code, 200)
-
-            # Ensure move worked
-            self.assertEqual(page_root.reload().get_descendants().count(), 1)
-
     def test_edit_page_other_site_and_language(self):
         """
         Test that a page can edited via the admin when your current site is
@@ -1046,12 +861,12 @@ class PageTest(PageTestBase):
             self.assertTrue('form_url' in response.context_data)
             self.assertEqual(response.context_data['form_url'], form_url)
 
-    def _parse_page_tree(self, response, parser_class):
+    def _parse_page_tree(self, response):
         content = response.content
         content = content.decode(response.charset)
 
         def _parse_html(html):
-            parser = parser_class()
+            parser = PageTreeParser()
             parser.feed(html)
             parser.close()
             document = parser.root
@@ -1068,26 +883,6 @@ class PageTest(PageTestBase):
             standardMsg = '%s\n%s' % ("Response's content is not valid HTML", e.msg)
             self.fail(self._formatMessage(None, standardMsg))
         return dom
-
-    def test_page_tree_regression_5892(self):
-        # ref: https://github.com/divio/django-cms/issues/5892
-        # Tests tree integrity when moving sibling pages from right
-        # to left under the same parent.
-        superuser = self.get_superuser()
-
-        create_page('Home', 'nav_playground.html', 'en')
-        alpha = create_page('Alpha', 'nav_playground.html', 'en')
-        create_page('Beta', 'nav_playground.html', 'en', parent=alpha)
-        create_page('Gamma', 'nav_playground.html', 'en')
-
-        with self.login_user_context(superuser):
-            with force_language('de'):
-                endpoint = admin_reverse('get_tree')
-                response = self.client.get(endpoint)
-                self.assertEqual(response.status_code, 200)
-                parsed = self._parse_page_tree(response, parser_class=PageTreeOptionsParser)
-                content = force_text(parsed)
-                self.assertIn(u'Seiten Einstellungen (Shift-Klick für erweiterte Einstellungen)', content)
 
     def test_page_get_tree_endpoint_flat(self):
         superuser = self.get_superuser()
@@ -1107,7 +902,7 @@ class PageTest(PageTestBase):
         with self.login_user_context(superuser):
             response = self.client.get(endpoint)
             self.assertEqual(response.status_code, 200)
-            parsed = self._parse_page_tree(response, parser_class=PageTreeLiParser)
+            parsed = self._parse_page_tree(response)
             content = force_text(parsed)
             self.assertIn(tree, content)
             self.assertNotIn('<li>\nBeta\n</li>', content)
@@ -1139,7 +934,7 @@ class PageTest(PageTestBase):
         with self.login_user_context(superuser):
             response = self.client.get(endpoint, data=data)
             self.assertEqual(response.status_code, 200)
-            parsed = self._parse_page_tree(response, parser_class=PageTreeLiParser)
+            parsed = self._parse_page_tree(response)
             content = force_text(parsed)
             self.assertIn(tree, content)
 
@@ -1155,7 +950,7 @@ class PageTest(PageTestBase):
         with self.login_user_context(superuser):
             response = self.client.get(endpoint, data={'q': 'alpha'})
             self.assertEqual(response.status_code, 200)
-            parsed = self._parse_page_tree(response, parser_class=PageTreeLiParser)
+            parsed = self._parse_page_tree(response)
             content = force_text(parsed)
             self.assertIn('<li>\nAlpha\n</li>', content)
             self.assertNotIn('<li>\nHome\n</li>', content)
@@ -1216,64 +1011,20 @@ class PageTest(PageTestBase):
                 self.assertEqual(response.content,
                                  b"This placeholder already has the maximum number (1) of allowed Text plugins.")
 
-    @override_settings(CMS_PLACEHOLDER_CACHE=True)
-    def test_placeholder_cache_cleared_on_publish(self):
-        page = self.get_page()
-        staff_user = self.get_superuser()
-        plugins = [
-            self._add_plugin_to_page(page, 'TextPlugin', publish=False),
-            self._add_plugin_to_page(page, 'LinkPlugin', publish=False),
-        ]
 
-        with self.login_user_context(staff_user):
-            # Publish the page
-            publish_endpoint = self.get_admin_url(Page, 'publish_page', page.pk, 'en')
-            self.client.post(publish_endpoint)
+class PermissionsTestCase(CMSTestCase):
 
-        response = self.client.get(page.get_absolute_url())
-        self.assertContains(response, '<p>text</p>', html=True)
-        self.assertContains(response, '<a href="https://www.django-cms.org" >A Link</a>', html=True)
+    def _add_plugin_to_page(self, page, plugin_type='LinkPlugin', language='en', publish=True):
+        plugin_data = {
+            'TextPlugin': {'body': 'text'},
+            'LinkPlugin': {'name': 'A Link', 'url': 'https://www.django-cms.org'},
+        }
+        placeholder = page.placeholders.get(slot='body')
+        plugin = add_plugin(placeholder, plugin_type, language, **plugin_data[plugin_type])
 
-        placeholder = plugins[0].placeholder
-
-        with self.login_user_context(staff_user):
-            # Delete the plugins
-            data = {'post': True}
-
-            for plugin in plugins:
-                endpoint = self.get_delete_plugin_uri(plugin)
-                response = self.client.post(endpoint, data)
-                self.assertEqual(response.status_code, 302)
-            self.assertEqual(placeholder.get_plugins('en').count(), 0)
-
-        with self.login_user_context(staff_user):
-            # Publish the page
-            publish_endpoint = self.get_admin_url(Page, 'publish_page', page.pk, 'en')
-            self.client.post(publish_endpoint)
-
-        response = self.client.get(page.get_absolute_url())
-        self.assertNotContains(response, '<p>text</p>', html=True)
-        self.assertNotContains(response, '<a href="https://www.django-cms.org" >A Link</a>', html=True)
-
-    def test_clear_placeholder_marks_page_as_dirty(self):
-        page = self.get_page()
-        staff_user = self.get_superuser()
-        plugins = [
-            self._add_plugin_to_page(page, 'TextPlugin'),
-            self._add_plugin_to_page(page, 'LinkPlugin'),
-        ]
-        placeholder = plugins[0].placeholder
-        endpoint = self.get_clear_placeholder_url(placeholder)
-
-        with self.login_user_context(staff_user):
-            self.assertEqual(page.reload().get_publisher_state("en"), PUBLISHER_STATE_DEFAULT)
-            response = self.client.post(endpoint, {'test': ''})
-            self.assertEqual(response.status_code, 302)
-            self.assertEqual(placeholder.get_plugins('en').count(), 0)
-            self.assertEqual(page.reload().get_publisher_state("en"), PUBLISHER_STATE_DIRTY)
-
-
-class PermissionsTestCase(PageTestBase):
+        if publish:
+            page.reload().publish(language)
+        return plugin
 
     def _add_translation_to_page(self, page):
         translation = create_title(
@@ -1291,6 +1042,37 @@ class PermissionsTestCase(PageTestBase):
 
     def _page_permission_exists(self, **kwargs):
         return PagePermission.objects.filter(**kwargs).exists()
+
+    def _translation_exists(self, slug=None, title=None):
+        if not slug:
+            slug = 'permissions-de'
+
+        lookup = Title.objects.filter(slug=slug)
+
+        if title:
+            lookup = lookup.filter(title=title)
+        return lookup.exists()
+
+    def _get_add_plugin_uri(self, page, language='en'):
+        placeholder = page.placeholders.get(slot='body')
+        uri = self.get_add_plugin_uri(
+            placeholder=placeholder,
+            plugin_type='LinkPlugin',
+            language=language,
+        )
+        return uri
+
+    def _get_page_data(self, **kwargs):
+        site = Site.objects.get_current()
+        data = {
+            'title': 'permissions',
+            'slug': 'permissions',
+            'language': 'en',
+            'site': site.pk,
+            'template': 'nav_playground.html',
+        }
+        data.update(**kwargs)
+        return data
 
     def _get_page_permissions_data(self, **kwargs):
         if 'id' in kwargs:

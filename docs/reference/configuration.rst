@@ -434,11 +434,9 @@ Example::
     )
 
 
-.. _i18n_l10n_reference:
-
-*****************************************************
-Internationalisation and localisation (I18N and L10N) 
-*****************************************************
+*************
+I18N and L10N
+*************
 
 CMS_LANGUAGES
 =============
@@ -572,13 +570,7 @@ default
 
 hide_untranslated
 -----------------
-
-Hides untranslated pages in menus. 
-
-When applied to the ``default`` directive, if ``False``, all pages in menus will be listed in all languages, including those
-that don't yet have content in a particular language. If ``True``, untranslated pages will be hidden.
-
-When applied to a particular language, hides that language's pages in menus until translations exist for them.
+Hide untranslated pages in menus
 
 type
     Boolean
@@ -609,10 +601,10 @@ default
 Unicode support for automated slugs
 ===================================
 
-If your site has languages which use non-ASCII character sets, :setting:`CMS_UNIHANDECODE_HOST` and
-:setting:`CMS_UNIHANDECODE_VERSION` will allow it to automate slug generation for those languages too.
-
-Support for this is provided by the unihandecode.js project. 
+django CMS supports automated slug generation from page titles that contain
+Unicode characters via the unihandecode.js project. To enable support for
+unihandecode.js, at least :setting:`CMS_UNIHANDECODE_HOST` and
+:setting:`CMS_UNIHANDECODE_VERSION` must be set.
 
 
 ..  setting:: CMS_UNIHANDECODE_HOST
@@ -994,12 +986,12 @@ Example::
 
     CMS_TOOLBARS = [
         # CMS Toolbars
-        'cms.cms_toolbars.PlaceholderToolbar',
-        'cms.cms_toolbars.BasicToolbar',
-        'cms.cms_toolbars.PageToolbar',
+        'cms.cms_toolbar.PlaceholderToolbar',
+        'cms.cms_toolbar.BasicToolbar',
+        'cms.cms_toolbar.PageToolbar',
 
         # third-party Toolbar
-        'aldryn_blog.cms_toolbars.BlogToolbar',
+        'aldryn_blog.cms_toolbar.BlogToolbar',
     ]
 
 .. _unihandecode.js: https://github.com/ojii/unihandecode.js

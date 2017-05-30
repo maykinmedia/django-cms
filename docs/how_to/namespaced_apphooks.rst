@@ -1,8 +1,8 @@
 .. _complex_apphooks_how_to:
 
-###########################################
-How to manage complex apphook configuration
-###########################################
+#############################
+Complex apphook configuration
+#############################
 
 In :ref:`apphooks_how_to` we discuss some basic points of using apphooks. In this document we will cover some more
 complex implementation possibilities.
@@ -43,7 +43,7 @@ need to set that to something *different* if an instance with that value already
 fall back to the one hard-wired into the class.
 
 In other words setting ``app_name`` correctly guarantees that URL-reversing will work, because it sets the fallback
-namespace appropriately.
+namespace approppriately.
 
 
 Set a namespace at instance-level
@@ -67,7 +67,7 @@ but the simplified version is:
 Apphook configurations
 **********************
 
-Namespacing your apphooks also makes it possible to manage additional database-stored apphook configuration, on an
+Namespacing your apphooks also makes it possible to manage additional database-stored aphook configuration, on an
 instance-by-instance basis.
 
 

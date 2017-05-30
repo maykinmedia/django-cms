@@ -68,11 +68,7 @@ class Placeholder(models.Model):
 
     def get_label(self):
         from cms.utils.placeholder import get_placeholder_conf
-        if self.page:
-            template = self.page.get_template()
-        else:
-            template = None
-        name = get_placeholder_conf("name", self.slot, template=template, default=title(self.slot))
+        name = get_placeholder_conf("name", self.slot, default=title(self.slot))
         name = _(name)
         return name
 
@@ -501,11 +497,6 @@ class Placeholder(models.Model):
 
         return min_ttl
 
-    def clear_cache(self, language, site_id=None):
-        if not site_id:
-            site_id = getattr(self.page, 'site_id', None)
-        clear_placeholder_cache(self, language, get_site_id(site_id))
-
     def mark_as_dirty(self, language, clear_cache=True):
         """
         Utility method to mark the attached object of this placeholder
@@ -516,7 +507,7 @@ class Placeholder(models.Model):
         from cms.models import Page, StaticPlaceholder, Title
 
         if clear_cache:
-            self.clear_cache(language)
+            clear_placeholder_cache(self, language, get_site_id(getattr(self.page, 'site_id', None)))
 
         # Find the attached model for this placeholder
         # This can be a static placeholder, page or none.

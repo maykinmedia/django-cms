@@ -579,7 +579,7 @@ class PublishingTests(TestCase):
         page = self.create_page('test', published=True)
         sub_page = self.create_page('test2', published=True, parent=page)
         self.assertTrue(sub_page.publisher_public.is_published('en'))
-        page.reload().title_set.all().delete()
+        page.title_set.all().delete()
         self.assertFalse(sub_page.publisher_public.is_published('en', force_reload=True))
 
     def test_modify_child_while_pending(self):
@@ -686,14 +686,9 @@ class PublishingTests(TestCase):
         self.assertFalse(gc1.publisher_public_id)
         self.assertTrue(gc1.is_published('en'))
         self.assertTrue(gc2.is_published('en'))
-
-        home = self.reload(home)
         home.unpublish('en')
-
         unpub1 = self.reload(unpub1)
-        unpub2 = self.reload(unpub2)
         unpub2.unpublish('en')  # Just marks this as not published
-
         for page in (unpub1, unpub2):
             self.assertFalse(page.is_published('en'), page)
             self.assertEqual(page.get_publisher_state("en"), PUBLISHER_STATE_DIRTY)
@@ -709,6 +704,7 @@ class PublishingTests(TestCase):
         self.assertIsNone(gc1.publisher_public)
         self.assertIsNotNone(gc2.publisher_public)
         self.assertFalse(gc2.publisher_public.is_published('en'))
+
 
     def test_unpublish_with_descendants(self):
         page = self.create_page("Page", published=True)
@@ -775,7 +771,7 @@ class PublishingTests(TestCase):
         self.assertTrue(child.publisher_public.is_published('en'))
         self.assertTrue(gchild.publisher_public.is_published('en'))
 
-        page.reload().unpublish('en')
+        page.unpublish('en')
         child = self.reload(child)
         gchild = self.reload(gchild)
         # Descendants become dirty after unpublish
@@ -904,7 +900,7 @@ class PublishingTests(TestCase):
         self.assertEqual(CMSPlugin.objects.count(), 3)
 
         # Now let's revert and restore
-        page.revert_to_live('en')
+        page.reset_to_public('en')
         self.assertEqual(page.get_publisher_state("en"), PUBLISHER_STATE_DEFAULT)
 
         self.assertEqual(CMSPlugin.objects.count(), 4)
@@ -1011,36 +1007,3 @@ class PublishingTests(TestCase):
                 self.assertTrue(draft.parent in draft.get_ancestors())
                 self.assertTrue(draft in draft.parent.get_descendants())
                 self.assertTrue(draft in draft.parent.get_children())
-
-    def test_publish_with_pending_unpublished_descendants(self):
-        # ref: https://github.com/divio/django-cms/issues/5900
-        ancestor = self.create_page("Ancestor", published=False)
-        parent = self.create_page("Child", published=False, parent=ancestor)
-        child = self.create_page("Child", published=False, parent=parent)
-
-        child.publish('en')
-        self.assertEqual(
-            child.reload().get_publisher_state("en"),
-            PUBLISHER_STATE_PENDING
-        )
-
-        parent.publish('en')
-        self.assertEqual(
-            parent.reload().get_publisher_state("en"),
-            PUBLISHER_STATE_PENDING
-        )
-
-        ancestor.publish('en')
-
-        self.assertEqual(
-            ancestor.reload().get_publisher_state("en"),
-            PUBLISHER_STATE_DEFAULT
-        )
-        self.assertEqual(
-            parent.reload().get_publisher_state("en"),
-            PUBLISHER_STATE_DEFAULT
-        )
-        self.assertEqual(
-            child.reload().get_publisher_state("en"),
-            PUBLISHER_STATE_DEFAULT
-        )

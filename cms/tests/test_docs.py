@@ -6,6 +6,7 @@ import os
 import socket
 import sys
 
+import django
 from django.utils.six.moves import StringIO
 from sphinx.application import Sphinx, SphinxWarning
 
@@ -69,7 +70,10 @@ class DocsTestCase(CMSTestCase):
 
     @skipIf(has_no_internet(), "No internet")
     @skipIf(enchant is None, "Enchant not installed")
-    @skipUnless(os.environ.get('TEST_DOCS') == '1', 'Skipping for simplicity')
+    @skipUnless(django.VERSION[:2] == (1, 8)
+                and sys.version_info[:2] == (3, 4)
+                and os.environ.get('DATABASE_URL') == 'sqlite://localhost/:memory:',
+                'Skipping for simplicity')
     def test_spelling(self):
         status = StringIO()
         with TemporaryDirectory() as OUT_DIR:

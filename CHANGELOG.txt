@@ -1,33 +1,3 @@
-=== 3.4.4 (unreleased) ===
-
-* Fixed a bug where canceling the publishing dialog wasn't respected.
-* Fixed a bug when after authentication us redirected on wrong url (site have only one language)
-* Changed the signature for internal ``cms.plugin_base.CMSPluginBase`` methods ``get_child_classes``
-  and ``get_parent_classes`` to take an optional ``instance`` parameter.
-* Fixed error in retrieving placeholder label from configuration.
-* Fixed a bug which caused certain translations to display double escaped text on the page
-  list admin view.
-* Adjusted the toolbar javascript template to escape values coming from the request.
-* Added Dropdown class to toolbar items
-* Replaced all custom markup on the ``admin/cms/page/includes/fieldset.html`` template
-  with an ``{% include %}`` call to Django's builtin ``fieldset.html`` template.
-* Fixed a bug which prevented a page from being marked as dirty when a placeholder was cleared.
-* Fixed an IntegrityError raised when publishing a page with no public version and whose publisher
-  state is pending.
-* Fixed an issue with JS not being able to determine correct path to async bundle
-* Fixed a ``DoesNotExist`` db error raised when moving a page marked as published but whose public
-  translation does not exist.
-* Fixed a bug where the menu would render nodes using the site session variable (set in the admin),
-  instead of the current request site.
-* Fixed a race condition bug where the cache keys on the database were deleted without syncing with the
-  cache server and as a result old menu items would continue to be displayed.
-* Fixed a 404 raised when clicking the ``Delete`` button for a page or title extension on Django >= 1.9
-* Added "How to serve multiple languages" section to documentation
-* Fixed a performance issue with nested pages when using the ``inherit`` flag on the ``{% placeholder %}`` tag.
-* Removed the internal ``reset_to_public`` page method in favour of the ``revert_to_live`` method.
-* Fixed a bug where the placeholder cache was not consistently cleared when a page was published.
-
-
 === 3.4.3 (2017-04-24) ===
 
 * Fixed a security vulnerability in the page redirect field which allowed users
@@ -163,7 +133,7 @@
 * Added a workaround for a bug when plugins couldn't be deleted in Firefox
   with 1Password extension installed
 * Changed CMS JavaScript bundling from simple concatenation to webpack-based.
-  Using CMS JavaScript modules directly is no longer possible.
+  Using CMS Javascript modules directly is no longer possible.
 * Fixed an issue where plugins that have no immediate DOM representation
   wouldn't be editable or movable.
 * Fixed a regression in which plugins that defined ``parent_classes``
@@ -194,7 +164,6 @@
   ``render_plugin_toolbar_config`` template tag directly.
 * Fixed ``render_model`` template tags to work with models containing deferred
   fields.
-* Fixed error in retrieving placeholder label from configuration.
 
 
 === 3.3.0 (2016-05-26) ===
@@ -353,7 +322,7 @@
 - Added tooltips for certain user interaction elements
 - Added full touch support and optimisations for mobile devices
 - Added gulp.js for linting, compressing and bundling
-- Added YuiDocs for JavaScript documentation
+- Added YuiDocs for Javascript documentation
 - Added ``CMS_TOOLBAR_SIMPLE_STRUCTURE_MODE`` to switch back to the old board rendering,
   this will be deprecated in 3.3.0
 - Added ``request.toolbars.placeholder_list`` this will replace
@@ -963,7 +932,7 @@ Please see Install/2.4 release notes *before* attempting to upgrade to version 2
 ==== 2.1.0 (2011-01-26) ====
 
 - language namespaces for apphooks (reverse("de:myview"), reverse("en:myview"))
-- video plugin switch to https://github.com/FlashJunior/OSFlashVideoPlayer
+- video plugin switch to http://github.com/FlashJunior/OSFlashVideoPlayer
 - frontediting added (cms.middlware.toolbar.ToolbarMiddleware)
 - testsuite works now under sqlite and postgres
 - orphaned text embed plugins get now deleted if not referenced in the text anymore

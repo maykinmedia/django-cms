@@ -321,6 +321,29 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
         invalidate_cms_page_cache()
         return moved_page
 
+    def revert_to_live(self, language):
+        """Revert the draft version to the same state as the public version
+        """
+        if not self.publisher_is_draft:
+            # Revert can only be called on draft pages
+            raise PublicIsUnmodifiable('The public instance cannot be reverted. Use draft.')
+
+        if not self.publisher_public:
+            raise PublicVersionNeeded('A public version of this page is needed')
+
+        public = self.publisher_public
+        public._copy_titles(self, language, public.is_published(language))
+        public._copy_contents(self, language)
+        public._copy_attributes(self)
+
+        self.title_set.filter(language=language).update(
+            publisher_state=PUBLISHER_STATE_DEFAULT,
+            published=True,
+        )
+
+        self._publisher_keep_state = True
+        self.save()
+
     def _copy_titles(self, target, language, published):
         """
         Copy all the titles to a new page (which must have a pk).
@@ -682,21 +705,15 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
         # publish, but only if all parents are published!!
         published = None
 
-        # Publication can be successful but the page is not guaranteed
-        # to be in the published state.
-        # This happens if a parent of the page is not published,
-        # so the page is marked as pending.
-        marked_as_published = False
-
         if not self.pk:
             self.save()
 
         # be sure we have the newest data including tree information
-        self.refresh_from_db()
-
+        p = Page.objects.get(pk=self.pk)
+        self.path = p.path
+        self.depth = p.depth
+        self.numchild = p.numchild
         if self._publisher_can_publish():
-            published = True
-
             if self.publisher_public_id:
                 # Ensure we have up to date mptt properties
                 public_page = Page.objects.get(pk=self.publisher_public_id)
@@ -718,14 +735,14 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
             if not public_page.parent_id:
                 # If we're publishing a page with no parent
                 # automatically set it's status to published
-                marked_as_published = True
+                published = True
             else:
                 # The page has a parent so we fetch the published
                 # status of the parent page.
-                marked_as_published = public_page.parent.is_published(language)
+                published = public_page.parent.is_published(language)
 
             # The target page now has a pk, so can be used as a target
-            self._copy_titles(public_page, language, marked_as_published)
+            self._copy_titles(public_page, language, published)
             self._copy_contents(public_page, language)
 
             # trigger home update
@@ -733,6 +750,7 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
             # invalidate the menu for this site
             menu_pool.clear(site_id=self.site_id)
             self.publisher_public = public_page
+            published = True
         else:
             # Nothing left to do
             pass
@@ -763,11 +781,6 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
         from cms.cache import invalidate_cms_page_cache
         invalidate_cms_page_cache()
 
-        if marked_as_published and get_cms_setting('PLACEHOLDER_CACHE'):
-            # Only clear the placeholder cache if the page
-            # was successfully published and is actually marked as published.
-            for placeholder in self.publisher_public.get_placeholders():
-                placeholder.clear_cache(language, site_id=self.site_id)
         return published
 
     def unpublish(self, language):
@@ -808,11 +821,9 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
         return True
 
     def mark_as_pending(self, language):
-        assert self.publisher_is_draft
-
         public = self.get_public_object()
 
-        if public and public.get_title_obj(language, fallback=False):
+        if public:
             state = public.get_publisher_state(language)
             # keep the same state
             # only set the page as unpublished
@@ -822,21 +833,25 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
                 published=False
             )
 
-        if self.is_published(language) and self.get_publisher_state(language) == PUBLISHER_STATE_DEFAULT:
+        draft = self.get_draft_object()
+
+        if draft and draft.is_published(language) and draft.get_publisher_state(
+                language) == PUBLISHER_STATE_DEFAULT:
             # Only change the state if the draft page is published
             # and it's state is the default (0)
-            self.set_publisher_state(language, state=PUBLISHER_STATE_PENDING)
+            draft.set_publisher_state(language, state=PUBLISHER_STATE_PENDING)
 
     def mark_descendants_pending(self, language):
         assert self.publisher_is_draft
 
-        descendants = self.get_descendants().filter(
-            publisher_public__isnull=False,
-            title_set__language=language,
-        )
+        # Go through all children of our public instance
+        public_page = self.publisher_public
 
-        for child in descendants.iterator():
-            child.mark_as_pending(language)
+        if public_page:
+            descendants = public_page.get_descendants().filter(title_set__language=language)
+
+            for child in descendants:
+                child.mark_as_pending(language)
 
     def mark_as_published(self, language):
         from cms.models import Title
@@ -871,13 +886,14 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
 
         # List of published draft pages
         publish_set = list(
-            self.get_children()
+            self.get_descendants()
             .filter(
                 title_set__published=True,
+                parent__title_set__published=True,
                 title_set__language=language
             )
             .select_related('publisher_public', 'publisher_public__parent')
-            .order_by('path')
+            .order_by('depth', 'path')
         )
 
         # prefetch the titles
@@ -902,7 +918,7 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
             if page.pk in titles_by_page_id:
                 page.title_cache = {language: titles_by_page_id[page.pk]}
 
-            if page.publisher_public:
+            if page.publisher_public_id:
                 # Page has a public version
                 publisher_public = page.publisher_public
 
@@ -919,45 +935,39 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
                 # Check if the parent of this page's
                 # public version is published.
                 if publisher_public.parent.is_published(language):
-                    draft_title = titles_by_page_id[page.pk]
-
-                    if draft_title.publisher_state == PUBLISHER_STATE_PENDING:
-                        (page
-                         .title_set
-                         .filter(pk=draft_title.pk)
-                         .update(publisher_state=PUBLISHER_STATE_DEFAULT))
-
                     public_title = titles_by_page_id.get(page.publisher_public_id)
 
                     if public_title and not public_title.published:
-                        (publisher_public
-                         .title_set
-                         .filter(pk=public_title.pk)
-                         .update(published=True, publisher_state=PUBLISHER_STATE_DEFAULT))
-                    page.mark_descendants_as_published(language)
+                        public_title._publisher_keep_state = True
+                        public_title.published = True
+                        public_title.publisher_state = PUBLISHER_STATE_DEFAULT
+                        public_title.save()
+
+                    draft_title = titles_by_page_id[page.pk]
+
+                    if draft_title.publisher_state == PUBLISHER_STATE_PENDING:
+                        draft_title.publisher_state = PUBLISHER_STATE_DEFAULT
+                        draft_title._publisher_keep_state = True
+                        draft_title.save()
             elif page.get_publisher_state(language) == PUBLISHER_STATE_PENDING:
                 page.publish(language)
 
-    def revert_to_live(self, language):
-        """Revert the draft version to the same state as the public version
+    def reset_to_public(self, language):
         """
+        Resets the draft version to the same state as the public version
+        """
+        # reset_to_public can only be called on draft pages
         if not self.publisher_is_draft:
-            # Revert can only be called on draft pages
             raise PublicIsUnmodifiable('The public instance cannot be reverted. Use draft.')
 
         if not self.publisher_public:
             raise PublicVersionNeeded('A public version of this page is needed')
 
         public = self.publisher_public
-        public._copy_attributes(self)
-        public._copy_contents(self, language)
         public._copy_titles(self, language, public.is_published(language))
-
-        self.title_set.filter(language=language).update(
-            published=True,
-            publisher_state=PUBLISHER_STATE_DEFAULT,
-        )
-
+        public._copy_contents(self, language)
+        public._copy_attributes(self)
+        self.title_set.filter(language=language).update(publisher_state=PUBLISHER_STATE_DEFAULT, published=True)
         self._publisher_keep_state = True
         self.save()
 
@@ -1444,23 +1454,21 @@ class Page(six.with_metaclass(PageMetaClass, MP_Node)):
         """
         Rescan and if necessary create placeholders in the current template.
         """
-        existing = {}
-        placeholders = [pl.slot for pl in self.get_declared_placeholders()]
-
-        for placeholder in self.placeholders.all():
-            if placeholder.slot in placeholders:
-                existing[placeholder.slot] = placeholder
-
-        for placeholder in placeholders:
-            if placeholder not in existing:
-                existing[placeholder] = self.placeholders.create(slot=placeholder)
-        return existing
-
-    def get_declared_placeholders(self):
         # inline import to prevent circular imports
+        from cms.models.placeholdermodel import Placeholder
         from cms.utils.placeholder import get_placeholders
 
-        return get_placeholders(self.get_template())
+        placeholders = get_placeholders(self.get_template())
+        found = {}
+        for placeholder in self.placeholders.all():
+            if placeholder.slot in placeholders:
+                found[placeholder.slot] = placeholder
+        for placeholder_name in placeholders:
+            if placeholder_name not in found:
+                placeholder = Placeholder.objects.create(slot=placeholder_name)
+                self.placeholders.add(placeholder)
+                found[placeholder_name] = placeholder
+        return found
 
     def get_xframe_options(self):
         """ Finds X_FRAME_OPTION from tree if inherited """

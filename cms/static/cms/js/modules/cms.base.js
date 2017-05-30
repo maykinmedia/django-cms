@@ -331,8 +331,7 @@ CMS.API.Helpers = {
         var tmp = '';
         var urlArray = [];
         var urlParams = [];
-        var hashParts = url.split('#');
-        var origin = hashParts.shift();
+        var origin = url;
 
         // return url if there is no param
         if (url.split('?').length > 1) {
@@ -378,7 +377,7 @@ CMS.API.Helpers = {
         tmp = tmp.replace('&', '?');
         var newUrl = origin + tmp;
 
-        newUrl = [newUrl.replace(/&/g, '&amp;')].concat(hashParts).join('#');
+        newUrl = newUrl.replace(/&/g, '&amp;');
 
         return newUrl;
     },

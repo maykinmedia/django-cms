@@ -491,7 +491,7 @@ This will render to:
 
     By default this template tag escapes the content of the rendered
     model attribute. This helps prevent a range of security vulnerabilities
-    stemming from HTML, JavaScript, and CSS Code Injection.
+    stemming from HTML, Javascript, and CSS Code Injection.
 
     To change this behavior, the project administrator should carefully review
     each use of this template tag and ensure that all content which is rendered
@@ -573,7 +573,7 @@ method is available; also template tags and filters are available in the block.
 
     By default this template tag escapes the content of the rendered
     model attribute. This helps prevent a range of security vulnerabilities
-    stemming from HTML, JavaScript, and CSS Code Injection.
+    stemming from HTML, Javascript, and CSS Code Injection.
 
     To change this behavior, the project administrator should carefully review
     each use of this template tag and ensure that all content which is rendered
@@ -640,7 +640,7 @@ It will render to something like:
 
     By default this template tag escapes the content of the rendered
     model attribute. This helps prevent a range of security vulnerabilities
-    stemming from HTML, JavaScript, and CSS Code Injection.
+    stemming from HTML, Javascript, and CSS Code Injection.
 
     To change this behavior, the project administrator should carefully review
     each use of this template tag and ensure that all content which is rendered
@@ -703,7 +703,7 @@ It will render to something like:
 
     By default this template tag escapes the content of the rendered
     model attribute. This helps prevent a range of security vulnerabilities
-    stemming from HTML, JavaScript, and CSS Code Injection.
+    stemming from HTML, Javascript, and CSS Code Injection.
 
     To change this behavior, the project administrator should carefully review
     each use of this template tag and ensure that all content which is rendered
@@ -785,9 +785,9 @@ page_language_url
 
 Returns the URL of the current page in an other language::
 
-    {% page_language_url "de" %}
-    {% page_language_url "fr" %}
-    {% page_language_url "en" %}
+    {% page_language_url de %}
+    {% page_language_url fr %}
+    {% page_language_url en %}
 
 If the current URL has no CMS Page and is handled by a navigation extender and
 the URL changes based on the language, you will need to set a ``language_changer``
@@ -840,7 +840,7 @@ Toolbar template tags
 
 The ``cms_toolbar`` template tag is included in the ``cms_tags`` library and will add the
 required CSS and javascript to the sekizai blocks in the base template. The template tag
-has to be placed after the ``<body>`` tag and before any ``{% placeholder %}`` occurrences
+has to be placed after the ``<body>`` tag and before any ``{% cms_placeholder %}`` occurrences
 within your HTML.
 
 Example::

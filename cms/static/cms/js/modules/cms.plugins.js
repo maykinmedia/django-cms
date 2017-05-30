@@ -149,8 +149,10 @@ var Plugin = new Class({
 
         this.ui = {
             container: contents,
+            publish: $('.cms-btn-publish'),
             save: $('.cms-toolbar-item-switch-save-edit'),
             window: $(window),
+            revert: $('.cms-toolbar-revert'),
             dragbar: null,
             draggable: null,
             draggables: null,
@@ -709,7 +711,15 @@ var Plugin = new Class({
             }
         });
 
-        CMS.API.Toolbar.onPublishAvailable();
+        // show publish / save buttons
+        this.ui.publish
+            .addClass('cms-btn-publish-active')
+            .removeClass('cms-btn-disabled')
+            .parent().show();
+        this.ui.window.trigger('resize');
+
+        // enable revert to live
+        this.ui.revert.removeClass('cms-toolbar-item-navigation-disabled');
     },
 
     /**
@@ -1770,7 +1780,7 @@ Plugin._initializeGlobalHandlers = function _initializeGlobalHandlers() {
         e.preventDefault();
         if (++clickCounter === 1) {
             timer = setTimeout(function () {
-                var anchor = $(e.target).closest('a');
+                var anchor = $(e.currentTarget);
 
                 clickCounter = 0;
                 // make sure that the target attribute is honoured on links

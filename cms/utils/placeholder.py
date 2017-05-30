@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import operator
 import warnings
-from collections import namedtuple
 
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
@@ -11,14 +10,12 @@ from django.template.base import VariableNode
 from django.template.loader import get_template
 from django.template.loader_tags import BlockNode, ExtendsNode, IncludeNode
 from django.utils import six
+from django.utils.encoding import force_text
 
 from sekizai.helpers import get_varname, is_variable_extend_node
 
 from cms.exceptions import DuplicatePlaceholderWarning
 from cms.utils import get_cms_setting
-
-
-DeclaredPlaceholder = namedtuple('DeclaredPlaceholder', ['slot', 'inherit'])
 
 
 def _get_nodelist(tpl):
@@ -64,22 +61,22 @@ def get_placeholder_conf(setting, placeholder, template=None, default=None):
         # 4th level
         keys.append(None)
         for key in keys:
-            try:
-                conf = placeholder_conf[key]
-                value = conf.get(setting, None)
-                if value is not None:
-                    return value
-                inherit = conf.get('inherit')
-                if inherit:
-                    if ' ' in inherit:
-                        inherit = inherit.split(' ')
-                    else:
-                        inherit = (None, inherit)
-                    value = get_placeholder_conf(setting, inherit[1], inherit[0], default)
+            for conf_key, conf in placeholder_conf.items():
+                if force_text(conf_key) == force_text(key):
+                    if not conf:
+                        continue
+                    value = conf.get(setting)
                     if value is not None:
                         return value
-            except KeyError:
-                continue
+                    inherit = conf.get('inherit')
+                    if inherit:
+                        if ' ' in inherit:
+                            inherit = inherit.split(' ')
+                        else:
+                            inherit = (None, inherit)
+                        value = get_placeholder_conf(setting, inherit[1], inherit[0], default)
+                        if value is not None:
+                            return value
     return default
 
 
@@ -175,7 +172,6 @@ def _scan_placeholders(nodelist, current_block=None, ignore_blocks=None):
     from cms.templatetags.cms_tags import Placeholder
 
     placeholders = []
-
     if ignore_blocks is None:
         # List of BlockNode instances to ignore.
         # This is important to avoid processing overriden block nodes.
@@ -184,7 +180,7 @@ def _scan_placeholders(nodelist, current_block=None, ignore_blocks=None):
     for node in nodelist:
         # check if this is a placeholder first
         if isinstance(node, Placeholder):
-            placeholders.append(node)
+            placeholders.append(node.get_name())
         elif isinstance(node, IncludeNode):
             # if there's an error in the to-be-included template, node.template becomes None
             if node.template:
@@ -235,25 +231,18 @@ def _scan_placeholders(nodelist, current_block=None, ignore_blocks=None):
 
 def get_placeholders(template):
     compiled_template = get_template(template)
-
-    placeholders = []
-    placeholder_nodes = _scan_placeholders(_get_nodelist(compiled_template))
+    placeholders = _scan_placeholders(_get_nodelist(compiled_template))
     clean_placeholders = []
-
-    for node in placeholder_nodes:
-        slot = node.get_name()
-        inherit = node.get_inherit_status()
-
-        if slot in clean_placeholders:
+    for placeholder in placeholders:
+        if placeholder in clean_placeholders:
             warnings.warn("Duplicate {{% placeholder \"{0}\" %}} "
                           "in template {1}."
-                          .format(slot, template, slot),
+                          .format(placeholder, template, placeholder),
                           DuplicatePlaceholderWarning)
         else:
-            validate_placeholder_name(slot)
-            placeholders.append(DeclaredPlaceholder(slot=slot, inherit=inherit))
-            clean_placeholders.append(slot)
-    return placeholders
+            validate_placeholder_name(placeholder)
+            clean_placeholders.append(placeholder)
+    return clean_placeholders
 
 
 def _extend_nodelist(extend_node):

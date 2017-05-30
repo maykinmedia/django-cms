@@ -5,7 +5,7 @@
 // this essentially makes sure that dynamically required bundles are loaded
 // from the same place
 // eslint-disable-next-line
-__webpack_public_path__ = require('../modules/get-dist-path')('bundle.forms.pagesmartlinkwidget');
+__webpack_public_path__ = require('../modules/get-dist-path')('bundle.forms.pagesmartlinkwidget.min.js');
 
 // #############################################################################
 // PAGE SMART LINK WIDGET

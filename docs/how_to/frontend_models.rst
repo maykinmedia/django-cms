@@ -1,8 +1,8 @@
 .. _frontend-editable-fields:
 
-#########################################################
-How to enable frontend editing for Page and Django models
-#########################################################
+###########################################
+Frontend editing for Page and Django models
+###########################################
 
 .. versionadded:: 3.0
 

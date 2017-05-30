@@ -1,6 +1,6 @@
-####################
-Menus and navigation
-####################
+##########
+Navigation
+##########
 
 .. highlight:: html+django
 

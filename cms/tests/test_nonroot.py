@@ -59,7 +59,7 @@ class NonRootCase(CMSTestCase):
 
     def test_show_breadcrumb(self):
         page2 = Page.objects.get(pk=self.page2.pk)
-        context = self.get_context(path=self.page2.get_absolute_url(), page=self.page2.publisher_public)
+        context = self.get_context(path=self.page2.get_absolute_url())
         tpl = Template("{% load menu_tags %}{% show_breadcrumb %}")
         tpl.render(context)
         nodes = context['ancestors']

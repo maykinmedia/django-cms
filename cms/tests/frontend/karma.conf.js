@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013, Divio AG
  * Licensed under BSD
- * https://github.com/aldryn/aldryn-boilerplate-bootstrap3
+ * http://github.com/aldryn/aldryn-boilerplate-bootstrap3
  */
 
 'use strict';

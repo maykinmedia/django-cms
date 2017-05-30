@@ -12,7 +12,7 @@ from django.utils.translation import ugettext_lazy as _
 from cms.api import get_page_draft, can_change_page
 from cms.constants import TEMPLATE_INHERITANCE_MAGIC, PUBLISHER_STATE_PENDING
 from cms.models import CMSPlugin, Title, Page
-from cms.toolbar.items import ButtonList, TemplateItem, REFRESH_PAGE
+from cms.toolbar.items import TemplateItem, REFRESH_PAGE
 from cms.toolbar_base import CMSToolbar
 from cms.toolbar_pool import toolbar_pool
 from cms.utils.i18n import get_language_tuple, force_language, get_language_dict, get_default_language
@@ -348,60 +348,42 @@ class PageToolbar(CMSToolbar):
         self.add_draft_live()
         self.add_publish_button()
 
-    def has_dirty_objects(self):
-        if self.dirty_statics:
-            return True
-
-        if not self.page:
-            return False
-
-        if self.page.is_dirty(self.current_lang):
-            return True
-        return self.page_is_pending(self.page, self.current_lang)
-
     # Buttons
 
     def add_publish_button(self, classes=('cms-btn-action', 'cms-btn-publish',)):
         # only do dirty lookups if publish permission is granted else button isn't added anyway
         if self.toolbar.edit_mode and self.has_publish_permission():
-            button = self.get_publish_button(classes=classes)
-            self.toolbar.add_item(button)
+            classes = list(classes or [])
+            pk = self.page.pk if self.page else 0
 
-    def get_publish_button(self, classes=None):
-        dirty = self.has_dirty_objects()
-        classes = list(classes or [])
+            dirty = (bool(self.dirty_statics) or
+                     (self.page and (self.page.is_dirty(self.current_lang) or
+                                     self.page_is_pending(self.page, self.current_lang))))
 
-        if dirty and 'cms-btn-publish-active' not in classes:
-            classes.append('cms-btn-publish-active')
+            if dirty:
+                classes.append('cms-btn-publish-active')
 
-        if self.dirty_statics or (self.page and self.page.is_published(self.current_lang)):
-            title = _('Publish page changes')
-        else:
-            title = _('Publish page now')
-            classes.append('cms-publish-page')
+            if self.dirty_statics or (self.page and self.page.is_published(self.current_lang)):
+                title = _('Publish page changes')
+            else:
+                title = _('Publish page now')
+                classes.append('cms-publish-page')
 
-        item = ButtonList(side=self.toolbar.RIGHT)
-        item.add_button(
-            title,
-            url=self.get_publish_url(),
-            disabled=not dirty,
-            extra_classes=classes,
-        )
-        return item
+            params = {}
 
-    def get_publish_url(self):
-        pk = self.page.pk if self.page else 0
-        params = {}
+            if self.dirty_statics:
+                params['statics'] = ','.join(str(sp.pk) for sp in self.dirty_statics)
 
-        if self.dirty_statics:
-            params['statics'] = ','.join(str(sp.pk) for sp in self.dirty_statics)
+            if self.in_apphook():
+                params['redirect'] = self.request.path_info
 
-        if self.in_apphook():
-            params['redirect'] = self.request.path_info
+            with force_language(self.current_lang):
+                url = admin_reverse('cms_page_publish_page', args=(pk, self.current_lang))
 
-        with force_language(self.current_lang):
-            url = admin_reverse('cms_page_publish_page', args=(pk, self.current_lang))
-        return add_url_parameters(url, params)
+            url = add_url_parameters(url, params)
+
+            self.toolbar.add_button(title, url=url, extra_classes=classes,
+                                    side=self.toolbar.RIGHT, disabled=not dirty)
 
     def add_draft_live(self):
         if self.page:

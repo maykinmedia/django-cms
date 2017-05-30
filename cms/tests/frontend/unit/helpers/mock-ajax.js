@@ -3,7 +3,7 @@
 Jasmine-Ajax - v3.2.0: a set of helpers for testing AJAX requests under the Jasmine
 BDD framework for JavaScript.
 
- https://github.com/jasmine/jasmine-ajax
+http://github.com/jasmine/jasmine-ajax
 
 Jasmine Home page: http://jasmine.github.io/
 
