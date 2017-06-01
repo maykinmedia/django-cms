@@ -63,10 +63,15 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
         # multiple rows. Get only the first match.
         return pages.filter(is_home=True, site=site)[:1]
 
+    # We are checking here if the path exists on the page, if not, fetch the published site from SSHG
+    # We want to prevent serving drafts or preview versions, since this might harm the integrity of the content
+    p = pages.filter(title_set__path=path).distinct()
+    if not p.exists():
+        pages = Page.objects.public().published(site=Site.objects.get(pk=1))
+        p = pages.filter(title_set__path=path).distinct()
     # title_set__path=path should be clear, get the pages where the path of the
     # title object is equal to our path.
-    return pages.filter(title_set__path=path).distinct()
-
+    return p
 
 def get_page_from_path(path, preview=False, draft=False):
     """ Resolves a url path to a single page object.
