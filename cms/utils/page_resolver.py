@@ -2,6 +2,7 @@
 import re
 
 from django.contrib.sites.models import Site
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db.models import Q
@@ -23,6 +24,7 @@ ADMIN_PAGE_RE = re.compile(ADMIN_PAGE_RE_PATTERN)
 
 
 def get_page_queryset(request=None):
+    # FIXME: take site into account, with fallback on settings.SITE_ID_GLOBAL
     if request and use_draft(request):
         return Page.objects.drafts()
 
@@ -40,6 +42,7 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
             # if so, get the page ID to request it directly
             match = ADMIN_PAGE_RE.search(path)
             if match:
+                # TODO: check if we need to take site into account, with fallback on settings.SITE_ID_GLOBAL
                 return Page.objects.filter(pk=match.group(1))
             else:
                 return Page.objects.none()
@@ -61,17 +64,26 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
         # home page.
         # PageQuerySet.published() introduces a join to title_set which can return
         # multiple rows. Get only the first match.
-        return pages.filter(is_home=True, site=site)[:1]
+        pages = pages.filter(is_home=True, site=site)
+        if pages.exists():
+            return pages[:1]
+        else:
+            # fall back on the global site
+            return Page.objects.public().published(
+                site=Site.objects.get(pk=settings.GLOBAL_SITE_ID)
+            ).filter(is_home=True)[:1]
 
     # We are checking here if the path exists on the page, if not, fetch the published site from SSHG
     # We want to prevent serving drafts or preview versions, since this might harm the integrity of the content
-    p = pages.filter(title_set__path=path).distinct()
-    if not p.exists():
-        pages = Page.objects.public().published(site=Site.objects.get(pk=1))
-        p = pages.filter(title_set__path=path).distinct()
+    pages = pages.filter(title_set__path=path).distinct()
+    if not pages.exists():
+        pages = Page.objects.public().published(
+            site=Site.objects.get(pk=settings.GLOBAL_SITE_ID)
+        ).filter(title_set__path=path).distinct()
     # title_set__path=path should be clear, get the pages where the path of the
     # title object is equal to our path.
-    return p
+    return pages
+
 
 def get_page_from_path(path, preview=False, draft=False):
     """ Resolves a url path to a single page object.

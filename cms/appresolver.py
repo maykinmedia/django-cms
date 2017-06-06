@@ -224,6 +224,10 @@ def _get_app_patterns():
 
     title_qs = Title.objects.public().filter(page__site=current_site)
 
+    if not title_qs.exists():
+        # fall back on the titles from the global site
+        title_qs = Title.objects.public().filter(page__site__id=settings.GLOBAL_SITE_ID)
+
     hooked_applications = OrderedDict()
 
     # Loop over all titles with an application hooked to them
