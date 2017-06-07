@@ -203,7 +203,8 @@ class MenuRenderer(object):
 
     def get_nodes(self, namespace=None, root_id=None, site_id=None, breadcrumb=False):
         if not site_id:
-            site_id = Site.objects.get_current().pk
+            # all sites will get the same menu (this was: Site.objects.get_current().pk)
+            site_id = Site.objects.get(id=settings.GLOBAL_SITE_ID).pk
         nodes = self._build_nodes(site_id)
         nodes = copy.deepcopy(nodes)
         nodes = self.apply_modifiers(

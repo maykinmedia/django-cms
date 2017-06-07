@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from django.conf import settings
+from django.contrib.sites.models import Site
 from django.utils.functional import SimpleLazyObject
 from django.utils.translation import get_language
 
@@ -164,7 +166,8 @@ class CMSMenu(Menu):
 
     def get_nodes(self, request):
         page_queryset = get_page_queryset(request)
-        site = current_site(request)
+        # all sites will get the same menu nodes
+        site = Site.objects.get(id=settings.GLOBAL_SITE_ID)  # was: site = current_site(request)
         lang = get_language_from_request(request)
 
         filters = {
