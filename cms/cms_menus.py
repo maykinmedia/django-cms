@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from django.conf import settings
-from django.contrib.sites.models import Site
 from django.utils.functional import SimpleLazyObject
 from django.utils.translation import get_language
 
@@ -8,7 +6,6 @@ from cms import constants
 from cms.apphook_pool import apphook_pool
 from cms.utils import get_language_from_request
 from cms.utils.conf import get_cms_setting
-from cms.utils.helpers import current_site
 from cms.utils.i18n import get_fallback_languages, hide_untranslated
 from cms.utils.permissions import get_view_restrictions
 from cms.utils.page_permissions import user_can_view_all_pages
@@ -36,7 +33,7 @@ def get_visible_page_objects(request, pages, site=None):
         return []
 
     if not site:
-        site = current_site(request)
+        site = request.current_site
 
     if user_can_view_all_pages(user, site):
         return pages
@@ -167,7 +164,7 @@ class CMSMenu(Menu):
     def get_nodes(self, request):
         page_queryset = get_page_queryset(request)
         # all sites will get the same menu nodes
-        site = Site.objects.get(id=settings.GLOBAL_SITE_ID)  # was: site = current_site(request)
+        site = request.current_site
         lang = get_language_from_request(request)
 
         filters = {

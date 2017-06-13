@@ -47,6 +47,9 @@ class classproperty(object):
 
 
 def current_site(request):
+    if hasattr(request, 'current_site'):
+        return request.current_site
+
     site_pk = request.GET.get(SITE_VAR, None) or request.POST.get(SITE_VAR, None)
 
     if not site_pk:

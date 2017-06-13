@@ -15,7 +15,6 @@ from django.contrib.admin.models import LogEntry, CHANGE
 from django.contrib.admin.utils import get_deleted_objects, quote
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.sites.models import Site
-from django.contrib.sites.shortcuts import get_current_site
 from django.core.exceptions import (MultipleObjectsReturned, ObjectDoesNotExist,
                                     PermissionDenied, ValidationError)
 from django.db import router, transaction
@@ -532,7 +531,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
         else:
             target = None
 
-        site = current_site(request)
+        site = request.current_site
 
         if target:
             if position in ('last-child', 'first-child'):
@@ -564,7 +563,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
             return page_permissions.user_can_change_page(request.user, page=obj)
         can_change_page = page_permissions.user_can_change_at_least_one_page(
             user=request.user,
-            site=current_site(request),
+            site=request.current_site,
             use_cache=False,
         )
         return can_change_page
@@ -629,7 +628,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
         return CMSChangeList
 
     def changelist_view(self, request, extra_context=None):
-        site = current_site(request)
+        site = request.current_site
 
         request.session['cms_admin_site'] = site.pk
 
@@ -707,7 +706,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
             site = Site.objects.get(id=int(site_id))
         except (TypeError, ValueError, MultipleObjectsReturned,
                 ObjectDoesNotExist):
-            site = get_current_site(request)
+            site = request.current_site
 
         if target is None:
             # Special case: If «target» is not provided, it means to let the
@@ -771,7 +770,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
         rows = []
         user = request.user
         page = get_object_or_404(self.model, id=page_id)
-        site = get_current_site(request)
+        site = request.current_site
         PermissionRow = namedtuple('Permission', ['is_global', 'can_change', 'permission'])
 
         global_permissions = GlobalPagePermission.objects.filter(sites__in=[page.site_id])
@@ -866,7 +865,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
             site = Site.objects.get(id=int(site_id))
         except (TypeError, ValueError, MultipleObjectsReturned,
                 ObjectDoesNotExist):
-            site = get_current_site(request)
+            site = request.current_site
 
         if target is None:
             # Special case: If «target» is not provided, it means to create the
@@ -1233,7 +1232,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
         attrs += "&language=" + language
         with force_language(language):
             url = page.get_absolute_url(language) + attrs
-        site = get_current_site(request)
+        site = request.current_site
         if not site == page.site:
             url = "http%s://%s%s" % ('s' if request.is_secure() else '',
             page.site.domain, url)
@@ -1270,7 +1269,7 @@ class PageAdmin(PlaceholderAdminMixin, admin.ModelAdmin):
             site = Site.objects.get(id=site_id)
         except (TypeError, ValueError, MultipleObjectsReturned,
                 ObjectDoesNotExist):
-            site = get_current_site(request)
+            site = request.current_site
 
         if page_id:
             page = get_object_or_404(self.model, pk=int(page_id))
