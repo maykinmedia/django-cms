@@ -4,6 +4,7 @@ import warnings
 from collections import deque
 
 from classytags.utils import flatten_context
+from django.conf import settings
 from django.template import Context
 from django.template.loader import get_template
 from django.utils.functional import cached_property
@@ -142,6 +143,13 @@ class ContentRenderer(object):
 
         language = language or self.request_language
         editable = editable and self.user_is_on_edit_mode()
+
+        if editable:
+            # only if editable is True, do the checks for the local market
+            if not self.request.is_global_site and page:  # could look at self.request.user.is_local_staff
+                page_slug = page.get_slug()
+                if page_slug not in settings.LOCAL_EDITABLE_PAGES:
+                    editable = False
 
         if use_cache and not editable and placeholder.cache_placeholder:
             use_cache = self.placeholder_cache_is_enabled()
