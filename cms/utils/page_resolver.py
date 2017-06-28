@@ -31,7 +31,7 @@ def get_page_queryset(request=None):
     return Page.objects.public()
 
 
-def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
+def get_page_queryset_from_path(path, preview=False, draft=False, site=None, request=None):
     """ Returns a queryset of pages corresponding to the path given
     """
     if is_installed('django.contrib.admin'):
@@ -46,6 +46,9 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
                 return Page.objects.filter(pk=match.group(1))
             else:
                 return Page.objects.none()
+
+    if request:
+        site = request.current_site
 
     if not site:
         site = Site.objects.get_current()
@@ -85,12 +88,12 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None):
     return pages
 
 
-def get_page_from_path(path, preview=False, draft=False):
+def get_page_from_path(path, preview=False, draft=False, request=None):
     """ Resolves a url path to a single page object.
     Returns None if page does not exist
     """
     try:
-        return get_page_queryset_from_path(path, preview, draft).get()
+        return get_page_queryset_from_path(path, preview, draft, request).get()
     except Page.DoesNotExist:
         return None
 
@@ -134,10 +137,10 @@ def get_page_from_request(request, use_path=None):
         if path.endswith("/"):
             path = path[:-1]
 
-    page = get_page_from_path(path, preview, draft)
+    page = get_page_from_path(path, preview, draft, request=request)
 
     if draft and page and not user_can_change_page(request.user, page):
-        page = get_page_from_path(path, preview, draft=False)
+        page = get_page_from_path(path, preview, draft=False, request=request)
 
     # For public pages we check if any parent is hidden due to published dates
     # In this case the selected page is not reachable
