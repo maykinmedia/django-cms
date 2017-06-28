@@ -93,7 +93,7 @@ def get_page_from_path(path, preview=False, draft=False, request=None):
     Returns None if page does not exist
     """
     try:
-        return get_page_queryset_from_path(path, preview, draft, request).get()
+        return get_page_queryset_from_path(path, preview, draft, request=request).get()
     except Page.DoesNotExist:
         return None
 
