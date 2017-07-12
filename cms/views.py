@@ -18,6 +18,7 @@ from cms.utils.i18n import (get_fallback_languages, force_language, get_public_l
                             get_redirect_on_fallback, get_language_list,
                             is_language_prefix_patterns_used)
 from cms.utils.page_resolver import get_page_from_request
+from cms.utils import i18n
 
 
 def details(request, slug):
@@ -99,8 +100,16 @@ def details(request, slug):
                             return HttpResponseRedirect(pages_root)
             elif not hasattr(request, 'toolbar') or not request.toolbar.redirect_url:
                 _handle_no_page(request, slug)
+        elif current_language in page_languages:
+            pass
         else:
-            return _handle_no_page(request, slug)
+            has_language = False
+            fallbacks = i18n.get_fallback_languages(current_language)
+            for _lang in page_languages:
+                if _lang in fallbacks:
+                    has_language = True
+            if not has_language:
+                return _handle_no_page(request, slug)
     if current_language not in available_languages:
         # If we didn't find the required page in the requested (current)
         # language, let's try to find a fallback
