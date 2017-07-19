@@ -47,12 +47,7 @@ def get_page_queryset_from_path(path, preview=False, draft=False, site=None, req
             else:
                 return Page.objects.none()
 
-    if request:
-        site = request.current_site
-
-    if not site:
-        site = Site.objects.get_current()
-
+    site = Site.objects.get_current()
     # PageQuerySet.published filter on page site.
     # We have to explicitly filter on site only in preview mode
     if draft:

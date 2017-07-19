@@ -98,6 +98,8 @@ def details(request, slug):
                             request.toolbar.redirect_url = pages_root
                         elif pages_root not in own_urls:
                             return HttpResponseRedirect(pages_root)
+            elif current_language in page_languages:
+                pass
             elif not hasattr(request, 'toolbar') or not request.toolbar.redirect_url:
                 _handle_no_page(request, slug)
         elif current_language in page_languages:
@@ -129,7 +131,9 @@ def details(request, slug):
                         return HttpResponseRedirect(path)
                 else:
                     found = True
-        if not found and (not hasattr(request, 'toolbar') or not request.toolbar.redirect_url):
+        if current_language in page_languages:
+            pass
+        elif not found and (not hasattr(request, 'toolbar') or not request.toolbar.redirect_url):
             # There is a page object we can't find a proper language to render it
             _handle_no_page(request, slug)
     else:
