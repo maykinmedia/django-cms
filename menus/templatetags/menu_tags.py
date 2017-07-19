@@ -134,6 +134,7 @@ class ShowMenu(InclusionTag):
                 menu_renderer = menu_pool.get_renderer(request)
 
             nodes = menu_renderer.get_nodes(namespace, root_id)
+            print(nodes)
             if root_id:  # find the root id and cut the nodes
                 id_nodes = menu_pool.get_nodes_by_attribute(nodes, "reverse_id", root_id)
                 if id_nodes:

@@ -177,8 +177,6 @@ class CMSMenu(Menu):
             if not use_draft(request):
                 filters['title_set__published'] = True
 
-        if not use_draft(request):
-            page_queryset = page_queryset.published()
         pages = page_queryset.filter(**filters).order_by("path")
         ids = {}
         nodes = []
