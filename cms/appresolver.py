@@ -255,6 +255,14 @@ def _get_app_patterns():
                 app_ns, get_patterns_for_title(path, title), app)
         included.append(mix_id)
         # Build the app patterns to be included in the cms urlconfs
+
+    langs = [code for code, lang in settings.LANGUAGES]
+    default_lang = settings.LANGUAGE_CODE
+    for id, hooked_application in hooked_applications.items():
+        for lang in langs:
+            if lang != default_lang and not hooked_application.get(lang) and hooked_application.get(default_lang):
+                hooked_applications[id][lang] = hooked_application.get(default_lang)
+
     app_patterns = []
     for page_id in hooked_applications.keys():
         resolver = None
