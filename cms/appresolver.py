@@ -8,6 +8,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.core.urlresolvers import (RegexURLResolver, Resolver404, reverse,
                                       RegexURLPattern)
 from django.db import OperationalError, ProgrammingError
+from django.db.models import Q
 from django.utils import six
 from django.utils.translation import get_language, override
 
@@ -221,15 +222,11 @@ def _get_app_patterns():
     # we don't have a request here so get_page_queryset() can't be used,
     # so use public() queryset.
     # This can be done because url patterns are used just in frontend
-
-    title_qs = Title.objects.public().filter(page__site=current_site)
-
-    if not title_qs.exists():
-        # fall back on the titles from the global site
-        title_qs = Title.objects.public().filter(page__site__id=settings.GLOBAL_SITE_ID)
+    currentQ = Q(page__site=current_site)
+    globalQ = Q(page__site_id=settings.GLOBAL_SITE_ID)
+    title_qs = Title.objects.filter(currentQ | globalQ)
 
     hooked_applications = OrderedDict()
-
     # Loop over all titles with an application hooked to them
     titles = (title_qs.exclude(page__application_urls=None)
                       .exclude(page__application_urls='')
