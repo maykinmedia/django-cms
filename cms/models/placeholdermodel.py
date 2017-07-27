@@ -126,6 +126,7 @@ class Placeholder(models.Model):
         attached_models = self._get_attached_models()
 
         if not attached_models:
+            print('returned over here')
             return False
 
         attached_objects = self._get_attached_objects()
@@ -139,6 +140,7 @@ class Placeholder(models.Model):
                 perm = user.has_perm(change_perm)
 
             if not perm:
+                print('nope it was here')
                 return False
         return True
 
@@ -164,6 +166,7 @@ class Placeholder(models.Model):
             return False
 
         if not self.has_change_permission(user):
+            print('over here')
             return False
         return True
 
@@ -248,19 +251,22 @@ class Placeholder(models.Model):
         """
         from cms.models import CMSPlugin, UserSettings
         if not hasattr(self, '_attached_fields_cache'):
+            print('has no cache')
             self._attached_fields_cache = []
             relations = self._get_related_objects()
+            print(relations)
             for rel in relations:
                 if issubclass(rel.model, CMSPlugin):
                     continue
                 from cms.admin.placeholderadmin import PlaceholderAdminMixin
                 related_model = rel.related_model
+                print(related_model)
 
                 try:
                     admin_class = admin.site._registry[related_model]
                 except KeyError:
                     admin_class = None
-
+                print(admin_class)
                 # UserSettings is a special case
                 # Attached objects are used to check permissions
                 # and we filter out any attached object that does not
@@ -340,6 +346,7 @@ class Placeholder(models.Model):
         """
         if hasattr(self, '_attached_models_cache'):
             return self._attached_models_cache
+        print(self._get_attached_fields())
         self._attached_models_cache = [field.model for field in self._get_attached_fields()]
         return self._attached_models_cache
 

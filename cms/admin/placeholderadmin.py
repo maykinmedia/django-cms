@@ -247,6 +247,7 @@ class PlaceholderAdminMixin(object):
 
     def has_change_plugin_permission(self, request, plugin):
         placeholder = plugin.placeholder
+        print(placeholder)
         return placeholder.has_change_plugin_permission(request.user, plugin)
 
     def has_delete_plugin_permission(self, request, plugin):
@@ -633,8 +634,9 @@ class PlaceholderAdminMixin(object):
 
         # CMSPluginBase subclass instance
         plugin_instance = obj.get_plugin_class_instance(admin=self.admin_site)
-
+        print('appels!')
         if not self.has_change_plugin_permission(request, obj):
+            print('failing here')
             return HttpResponseForbidden(force_text(_("You do not have permission to edit this plugin")))
 
         response = plugin_instance.change_view(request, str(plugin_id))

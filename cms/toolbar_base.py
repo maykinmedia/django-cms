@@ -1,3 +1,5 @@
+from django.utils.translation import get_language
+
 # -*- coding: utf-8 -*-
 from cms.exceptions import LanguageError
 from cms.utils import get_language_from_request
@@ -17,7 +19,7 @@ class CMSToolbar(object):
         try:
             self.current_lang = get_language_object(get_language_from_request(self.request), self.current_site.pk)['code']
         except LanguageError:
-            self.current_lang = None
+            self.current_lang = get_language()
 
     def populate(self):
         pass
