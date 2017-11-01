@@ -16,7 +16,7 @@ from cms.page_rendering import _handle_no_page, render_page
 from cms.utils import get_language_code, get_language_from_request, get_cms_setting
 from cms.utils.i18n import (get_fallback_languages, force_language, get_public_languages,
                             get_redirect_on_fallback, get_language_list,
-                            is_language_prefix_patterns_used)
+                            is_language_prefix_patterns_used, get_public_languages)
 from cms.utils.page_resolver import get_page_from_request
 from cms.utils import i18n
 
@@ -64,6 +64,8 @@ def details(request, slug):
                 current_language = None
     if current_language is None:
         current_language = get_language_code(get_language())
+    if page.is_home and current_language not in get_public_languages(site_id=page.site_id):
+        current_language = get_public_languages(site_id=page.site_id)[0]
     # Check that the current page is available in the desired (current) language
     available_languages = []
     # this will return all languages in draft mode, and published only in live mode
@@ -71,7 +73,7 @@ def details(request, slug):
     if hasattr(request, 'user') and request.user.is_staff:
         user_languages = get_language_list()
     else:
-        user_languages = get_public_languages()
+        user_languages = get_public_languages(page.site_id)
     for frontend_lang in user_languages:
         if frontend_lang in page_languages:
             available_languages.append(frontend_lang)
@@ -140,7 +142,7 @@ def details(request, slug):
         page_path = page.get_absolute_url(language=current_language)
         page_slug = page.get_path(language=current_language) or page.get_slug(language=current_language)
 
-        if slug and slug != page_slug and request.path[:len(page_path)] != page_path:
+        if (slug and slug != page_slug and request.path[:len(page_path)] != page_path) or page.is_home and request.path[:len(page_path)] != page_path:
             # The current language does not match it's slug.
             #  Redirect to the current language.
             if hasattr(request, 'toolbar') and request.user.is_staff and request.toolbar.edit_mode:
