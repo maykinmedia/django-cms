@@ -94,7 +94,7 @@ class DefaultLanguageChanger(object):
         if page:
             with force_language(lang):
                 try:
-                    return page.get_absolute_url(language=lang, fallback=True)
+                    return page.get_absolute_url(language=lang, fallback=False)
                 except (Title.DoesNotExist, NoReverseMatch):
                     if hide_untranslated(lang) and settings.USE_I18N:
                         return '/%s/' % lang
@@ -111,7 +111,7 @@ class DefaultLanguageChanger(object):
             except:
                 view = None
         if hasattr(self.request, 'toolbar') and self.request.toolbar.obj:
-            with force_language(page_language):
+            with force_language(lang):
                 try:
                     return self.request.toolbar.obj.get_absolute_url()
                 except:
@@ -121,11 +121,11 @@ class DefaultLanguageChanger(object):
             if view.namespace:
                 view_name = "%s:%s" % (view.namespace, view_name)
             url = None
-            with force_language(page_language):
+            with force_language(lang):
                 try:
                     url = reverse(view_name, args=view.args, kwargs=view.kwargs, current_app=view.app_name)
                 except NoReverseMatch:
                     pass
             if url:
                 return url
-        return '%s%s' % (self.get_page_path(page_language), self.app_path)
+        return '%s%s' % (self.get_page_path(lang), self.app_path)
