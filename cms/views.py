@@ -16,7 +16,7 @@ from cms.page_rendering import _handle_no_page, render_page
 from cms.utils import get_language_code, get_language_from_request, get_cms_setting
 from cms.utils.i18n import (get_fallback_languages, force_language, get_public_languages,
                             get_redirect_on_fallback, get_language_list,
-                            is_language_prefix_patterns_used, get_public_languages)
+                            is_language_prefix_patterns_used)
 from cms.utils.page_resolver import get_page_from_request
 from cms.utils import i18n
 
@@ -114,7 +114,8 @@ def details(request, slug):
                     has_language = True
             if not has_language:
                 return _handle_no_page(request, slug)
-    if current_language not in available_languages:
+    new_language = get_language_from_request(request)
+    if (current_language not in available_languages or new_language not in available_languages) and not request.user.is_staff:
         # If we didn't find the required page in the requested (current)
         # language, let's try to find a fallback
         found = False
