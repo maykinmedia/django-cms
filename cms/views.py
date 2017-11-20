@@ -115,7 +115,7 @@ def details(request, slug):
             if not has_language:
                 return _handle_no_page(request, slug)
     new_language = get_language_from_request(request)
-    if (current_language not in available_languages or new_language not in available_languages) and not request.user.is_staff:
+    if (current_language not in available_languages and new_language not in available_languages) and not request.user.is_staff:
         # If we didn't find the required page in the requested (current)
         # language, let's try to find a fallback
         found = False
