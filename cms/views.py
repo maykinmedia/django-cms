@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import logging
+
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
 from django.core.urlresolvers import resolve, Resolver404, reverse
@@ -7,7 +9,8 @@ from django.http import HttpResponseRedirect, HttpResponse
 from django.utils.cache import patch_cache_control
 from django.utils.http import urlquote
 from django.utils.timezone import now
-from django.utils.translation import get_language
+from django.utils.translation import get_language, activate
+from django.contrib.sites.shortcuts import get_current_site
 
 from cms.apphook_pool import apphook_pool
 from cms.appresolver import get_app_urls
@@ -20,6 +23,7 @@ from cms.utils.i18n import (get_fallback_languages, force_language, get_public_l
 from cms.utils.page_resolver import get_page_from_request
 from cms.utils import i18n
 
+logger = logging.getLogger(__name__)
 
 def details(request, slug):
     """
@@ -115,6 +119,10 @@ def details(request, slug):
             if not has_language:
                 return _handle_no_page(request, slug)
     new_language = get_language_from_request(request)
+    logger.info("Determining languages")
+    logger.info(available_languages)
+    logger.info(current_language)
+    logger.info(new_language)
     if (current_language not in available_languages and new_language not in available_languages) and not request.user.is_staff:
         # If we didn't find the required page in the requested (current)
         # language, let's try to find a fallback
@@ -140,6 +148,12 @@ def details(request, slug):
             # There is a page object we can't find a proper language to render it
             _handle_no_page(request, slug)
     else:
+        current_site = get_current_site(request)
+        if not request.user.is_staff and current_site.id == 1:
+            if new_language != current_language and new_language not in available_languages:
+                activate(current_language)
+                return HttpResponseRedirect('/' + available_languages[0])
+
         page_path = page.get_absolute_url(language=current_language)
         page_slug = page.get_path(language=current_language) or page.get_slug(language=current_language)
 
