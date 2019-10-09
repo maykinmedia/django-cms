@@ -33,7 +33,7 @@ def details(request, slug):
     The main view of the Django-CMS! Takes a request and a slug, renders the
     page.
     """
-    logger.debug(slug)
+    logger.info(slug)
     response_timestamp = now()
     if get_cms_setting("PAGE_CACHE") and (
         not hasattr(request, 'toolbar') or (
@@ -58,9 +58,9 @@ def details(request, slug):
     if not page:
         return _handle_no_page(request, slug)
         
-    logger.debug(page.id)
-    logger.debug(page.languages)
-    logger.debug(page.site.domain)
+    logger.info(page.id)
+    logger.info(page.languages)
+    logger.info(page.site.domain)
     current_language = request.GET.get('language', None)
     if not current_language:
         current_language = request.POST.get('language', None)
