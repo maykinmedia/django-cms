@@ -4,24 +4,27 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth.views import redirect_to_login
-from django.core.urlresolvers import resolve, Resolver404, reverse
-from django.http import HttpResponseRedirect, HttpResponse
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.urlresolvers import Resolver404, resolve, reverse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.cache import patch_cache_control
 from django.utils.http import urlquote
 from django.utils.timezone import now
-from django.utils.translation import get_language, activate
-from django.contrib.sites.shortcuts import get_current_site
+from django.utils.translation import activate, get_language
 
 from cms.apphook_pool import apphook_pool
 from cms.appresolver import get_app_urls
 from cms.cache.page import get_page_cache
 from cms.page_rendering import _handle_no_page, render_page
-from cms.utils import get_language_code, get_language_from_request, get_cms_setting
-from cms.utils.i18n import (get_fallback_languages, force_language, get_public_languages,
-                            get_redirect_on_fallback, get_language_list,
-                            is_language_prefix_patterns_used)
+from cms.utils import (
+    get_cms_setting, get_language_code, get_language_from_request, i18n
+)
+from cms.utils.i18n import (
+    force_language, get_fallback_languages, get_language_list,
+    get_public_languages, get_redirect_on_fallback,
+    is_language_prefix_patterns_used
+)
 from cms.utils.page_resolver import get_page_from_request
-from cms.utils import i18n
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,7 @@ def details(request, slug):
     The main view of the Django-CMS! Takes a request and a slug, renders the
     page.
     """
+    logger.debug(slug)
     response_timestamp = now()
     if get_cms_setting("PAGE_CACHE") and (
         not hasattr(request, 'toolbar') or (
@@ -51,6 +55,9 @@ def details(request, slug):
 
     # Get a Page model object from the request
     page = get_page_from_request(request, use_path=slug)
+    logger.debug(page.id)
+    logger.debug(page.languages)
+    logger.debug(page.site.domain)
     if not page:
         return _handle_no_page(request, slug)
     current_language = request.GET.get('language', None)
