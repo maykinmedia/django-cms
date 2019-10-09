@@ -55,11 +55,12 @@ def details(request, slug):
 
     # Get a Page model object from the request
     page = get_page_from_request(request, use_path=slug)
+    if not page:
+        return _handle_no_page(request, slug)
+        
     logger.debug(page.id)
     logger.debug(page.languages)
     logger.debug(page.site.domain)
-    if not page:
-        return _handle_no_page(request, slug)
     current_language = request.GET.get('language', None)
     if not current_language:
         current_language = request.POST.get('language', None)
