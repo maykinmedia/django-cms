@@ -402,9 +402,12 @@ class CMSToolbar(ToolbarAPIMixin):
                 if key in first:
                     continue
                 toolbar = self.toolbars[key]
-                result = getattr(toolbar, func_name)()
-                if isinstance(result, HttpResponse):
-                    return result
+                try: # See #388 for reason of workaround
+                    result = getattr(toolbar, func_name)()
+                    if isinstance(result, HttpResponse):
+                        return result
+                except:
+                    pass
 
 
 class EmptyToolbar(object):
